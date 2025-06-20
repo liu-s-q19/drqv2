@@ -22,6 +22,8 @@ from logger import Logger
 from replay_buffer import ReplayBufferStorage, make_replay_loader
 from video import TrainVideoRecorder, VideoRecorder
 
+from tqdm import tqdm
+
 torch.backends.cudnn.benchmark = True
 
 
@@ -135,6 +137,7 @@ class Workspace:
         self.replay_storage.add(time_step)
         self.train_video_recorder.init(time_step.observation)
         metrics = None
+        pbar = tqdm(total=self.cfg.num_train_frames, desc='Training', unit='step')
         while train_until_step(self.global_step):
             if time_step.last():
                 self._global_episode += 1
@@ -188,6 +191,9 @@ class Workspace:
             self.train_video_recorder.record(time_step.observation)
             episode_step += 1
             self._global_step += 1
+            pbar.update(1)
+            pbar.set_postfix({'step': self.global_step, 'episode': self.global_episode, 'reward': episode_reward})
+        pbar.close()
 
     def save_snapshot(self):
         snapshot = self.work_dir / 'snapshot.pt'
